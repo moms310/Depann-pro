@@ -1402,14 +1402,22 @@ function scalePreview(){
   const a4=document.getElementById('preview-a4');
   if(!wrap||!a4)return;
   const A4_W=794;
+  const A4_H=1123;
   const availW=wrap.offsetWidth||window.innerWidth;
   const scale=availW/A4_W;
   a4.style.width=A4_W+'px';
   a4.style.transformOrigin='top left';
   a4.style.transform='scale('+scale+')';
-  // Hauteur du wrap = hauteur réelle des pages × scale
   setTimeout(()=>{
-    wrap.style.height=(a4.offsetHeight*scale)+'px';
+    const rawH=a4.offsetHeight;
+    const nbPages=Math.max(1,Math.ceil(rawH/A4_H));
+    const totalH=nbPages*A4_H;
+    // Étendre la page et la bande bleue sur toute la hauteur calculée
+    const pageDiv=a4.querySelector('[data-a4page]');
+    if(pageDiv){ pageDiv.style.minHeight=totalH+'px'; }
+    const bar=a4.querySelector('[data-sidebar]');
+    if(bar){ bar.style.height=totalH+'px'; }
+    wrap.style.height=(totalH*scale)+'px';
   },80);
 }
 
@@ -1431,19 +1439,24 @@ async function generatePdfBlob(docId){
   const iframeCSS = '*{box-sizing:border-box;margin:0;padding:0}'
     +'html,body{width:'+A4_W+'px;background:white;font-family:\'DM Sans\',sans-serif;overflow:visible}';
   const srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<meta name="viewport" content="width='+A4_W+', initial-scale=1">'
     +'<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">'
     +'<style>'+iframeCSS+'</style></head><body>'+a4Content+'</body></html>';
 
-  // ── Étape 1 : mesurer la hauteur réelle ──
+  // ── Étape 1 : mesurer la hauteur réelle (sans contrainte de hauteur) ──
   const probe = document.createElement('iframe');
-  probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:3000px;border:none;visibility:hidden;overflow:visible';
+  probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:6000px;border:none;visibility:hidden;overflow:visible';
   document.body.appendChild(probe);
   await new Promise(r => { probe.onload = r; probe.srcdoc = srcdoc; });
-  await new Promise(r => setTimeout(r, 1200));
-  const rawH = Math.max(probe.contentDocument.body.scrollHeight, probe.contentDocument.body.offsetHeight);
+  await new Promise(r => setTimeout(r, 1400));
+  const rawH = Math.max(
+    probe.contentDocument.documentElement.scrollHeight,
+    probe.contentDocument.body.scrollHeight,
+    probe.contentDocument.body.offsetHeight
+  );
   document.body.removeChild(probe);
 
-  // ── Étape 2 : nb de pages A4 (chacune = 297mm = 1123px) ──
+  // ── Étape 2 : nb de pages A4 (1 page = 1123px à 96dpi) ──
   const nbPages = Math.max(1, Math.ceil(rawH / A4_H));
   const totalH  = nbPages * A4_H;
 
@@ -1452,12 +1465,15 @@ async function generatePdfBlob(docId){
   frame.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:'+totalH+'px;border:none;visibility:hidden;overflow:hidden';
   document.body.appendChild(frame);
   await new Promise(r => { frame.onload = r; frame.srcdoc = srcdoc; });
-  await new Promise(r => setTimeout(r, 1200));
+  await new Promise(r => setTimeout(r, 1400));
 
-  // Bande bleue sur toute la hauteur
+  // Bande bleue : couvre toute la hauteur totale des pages
   const bar = frame.contentDocument.querySelector('[data-sidebar]');
-  if(bar){ bar.style.height = totalH+'px'; bar.style.bottom='auto'; }
-  await new Promise(r => setTimeout(r, 100));
+  if(bar){ bar.style.height = totalH+'px'; bar.style.position='absolute'; bar.style.top='0'; bar.style.left='0'; }
+  // Forcer la page A4 à s'étendre sur toute la hauteur totale
+  const pageDiv = frame.contentDocument.querySelector('[data-a4page]');
+  if(pageDiv){ pageDiv.style.minHeight = totalH+'px'; }
+  await new Promise(r => setTimeout(r, 150));
 
   // ── Étape 4 : capture canvas à scale 2 ──
   const canvas = await html2canvas(frame.contentDocument.body, {
@@ -1631,10 +1647,10 @@ function buildA4Html(d){
       <div style="font-size:11px;color:#9499AA">Date et signature précédées de la mention « Bon pour accord »</div>
     </div>`:'');
 
-  return `<div style="width:210mm;min-height:297mm;height:297mm;overflow:hidden;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative;page-break-after:always;break-after:page">
+  return `<div data-a4page style="width:794px;min-height:1123px;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative;background:white">
 
-    <!-- BANDE LATERALE COULEUR -->
-    <div data-sidebar style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${accent}"></div>
+    <!-- BANDE LATERALE COULEUR : hauteur fixée dynamiquement après rendu -->
+    <div data-sidebar style="position:absolute;left:0;top:0;width:5px;height:100%;background:${accent}"></div>
 
     <!-- HEADER -->
     <table style="width:100%;border-collapse:collapse;margin-bottom:28px">
