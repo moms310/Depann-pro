@@ -1596,7 +1596,6 @@ async function sendByEmail(id){
   const s = settings;
   const isF = d.type==='facture';
   const subject = `${isF?'Votre facture':'Votre devis'} ${s.company||''}`.trim();
-  const {ttc} = computeTotals(d.lines||[]);
   const bodyText =
 `Bonjour ${d.client},
 
@@ -1622,52 +1621,44 @@ ${s.company||''}${s.phone?'\n'+s.phone:''}${s.email?'\n'+s.email:''}`;
       reader.readAsDataURL(blob);
     });
 
-    // Construire un fichier .eml (RFC 2822) avec le PDF en pièce jointe
-    // iOS Mail reconnaît ce format et ouvre le mail pré-rempli avec la PJ
+    // Construire le fichier .eml complet (RFC 2822)
     const boundary = 'DepannPro_' + Date.now();
-    const emlContent = [
+    const emlLines = [
       `To: ${d.emailClient}`,
-      `Subject: ${subject}`,
+      `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
       `MIME-Version: 1.0`,
       `Content-Type: multipart/mixed; boundary="${boundary}"`,
       ``,
       `--${boundary}`,
       `Content-Type: text/plain; charset=UTF-8`,
-      `Content-Transfer-Encoding: quoted-printable`,
+      `Content-Transfer-Encoding: base64`,
       ``,
-      bodyText,
+      btoa(unescape(encodeURIComponent(bodyText))).match(/.{1,76}/g).join('\r\n'),
       ``,
       `--${boundary}`,
       `Content-Type: application/pdf; name="${fileName}"`,
       `Content-Transfer-Encoding: base64`,
       `Content-Disposition: attachment; filename="${fileName}"`,
       ``,
-      // Découper la base64 en lignes de 76 caractères (standard MIME)
       base64Pdf.match(/.{1,76}/g).join('\r\n'),
       ``,
       `--${boundary}--`,
     ].join('\r\n');
 
-    const emlBlob = new Blob([emlContent], { type: 'message/rfc822' });
-    const emlFile = new File([emlBlob], title+'.eml', { type: 'message/rfc822' });
-
-    // Essayer le partage natif avec le .eml (fonctionne sur iOS)
-    if(navigator.share && navigator.canShare && navigator.canShare({files:[emlFile]})){
-      await navigator.share({ files: [emlFile] });
-      return;
-    }
-
-    // Fallback : télécharger le .eml (double-clic l'ouvre dans Mail sur Mac/iOS)
-    const url = URL.createObjectURL(emlBlob);
+    // Ouvrir directement dans Mail via blob URL avec type message/rfc822
+    // iOS reconnaît ce MIME type et ouvre Mail avec tout pré-rempli + PJ
+    const emlBlob = new Blob([emlLines], { type: 'message/rfc822' });
+    const emlUrl = URL.createObjectURL(emlBlob);
     const a = document.createElement('a');
-    a.href = url; a.download = title+'.eml';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 5000);
-    toast('📧 Fichier mail généré — ouvrez-le pour envoyer');
+    a.href = emlUrl;
+    a.download = title + '.eml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(emlUrl), 10000);
+    toast('📧 Ouverture de Mail…');
   } catch(e){
-    if(e.name !== 'AbortError'){
-      toast('❌ Erreur : '+e.message);
-    }
+    if(e.name !== 'AbortError') toast('❌ Erreur : '+e.message);
   }
 }
 // ══════════════════════════════════════════
