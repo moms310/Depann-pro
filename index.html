@@ -62,8 +62,8 @@ body{font-family:var(--font);color:var(--ink);max-width:430px;margin:0 auto;posi
 
 /* ── APP SHELL ── */
 #app{height:100%;display:flex;flex-direction:column}
-.screens{flex:1;overflow:hidden;position:relative}
-.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 88px);display:none;background:var(--bg)}
+.screens{flex:1;overflow:hidden;position:relative;min-height:0}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 120px);display:none;background:var(--bg)}
 .screen.active{display:block}
 
 /* ── TOPBAR ── */
@@ -75,7 +75,7 @@ body{font-family:var(--font);color:var(--ink);max-width:430px;margin:0 auto;posi
 .icon-btn:active{transform:scale(.92)}
 
 /* ── TABBAR ── */
-.tabbar{background:var(--surface);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0;box-shadow:0 -1px 0 var(--border),0 -8px 24px rgba(0,0,0,.05)}
+.tabbar{background:var(--surface);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0;box-shadow:0 -1px 0 var(--border),0 -8px 24px rgba(0,0,0,.05);position:relative;z-index:80}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;gap:4px;cursor:pointer;color:var(--ink3);font-size:10px;font-weight:600;transition:all .2s;border:none;background:none;letter-spacing:.1px;position:relative}
 .tab.active{color:var(--blue)}
 .tab.active::after{content:'';position:absolute;top:-1px;left:50%;transform:translateX(-50%);width:24px;height:2.5px;background:var(--blue);border-radius:0 0 3px 3px}
@@ -158,14 +158,14 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
 .btn-xs{padding:7px 12px;font-size:12px;border-radius:8px;width:auto}
 
 /* ── FULLSCREEN ── */
-.fullscreen{position:fixed;inset:0;background:var(--bg);z-index:200;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;max-width:430px;margin:0 auto}
+.fullscreen{position:fixed;inset:0;background:var(--bg);z-index:200;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;max-width:430px;margin:0 auto;min-height:0}
 .fullscreen.open{transform:translateX(0)}
 .fs-header{background:var(--surface);padding:14px 20px;padding-top:calc(env(safe-area-inset-top,44px) + 10px);display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);flex-shrink:0}
 .fs-back{width:36px;height:36px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);cursor:pointer;color:var(--ink2);flex-shrink:0;transition:all .15s}
 .fs-back:active{transform:scale(.9)}
 .fs-title{font-size:17px;font-weight:700;flex:1;letter-spacing:-.2px}
-.fs-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)}
-.fs-footer{padding:16px 20px;background:var(--surface);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px);border-top:1px solid var(--border);flex-shrink:0}
+.fs-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 140px);scroll-padding-bottom:140px}
+.fs-footer{padding:16px 20px;background:var(--surface);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 16px);border-top:1px solid var(--border);flex-shrink:0;position:relative;z-index:60;box-shadow:0 -8px 24px rgba(0,0,0,.04)}
 
 /* ── STEPPER ── */
 .stepper-wrap{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px 14px}
@@ -197,9 +197,9 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
 /* ── CATALOGUE ITEMS ── */
 .cat-group{padding:0 16px;margin-top:14px}
 .cat-group-title{font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px}
-.cat-item{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--bg);border-radius:11px;margin-bottom:8px;cursor:pointer;transition:all .15s;border:1px solid transparent}
+.cat-item{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 14px;background:var(--bg);border-radius:11px;margin-bottom:8px;cursor:pointer;transition:all .15s;border:1px solid transparent;font-family:var(--font);text-align:left;color:var(--ink);touch-action:manipulation;-webkit-appearance:none;appearance:none}
 .cat-item:active{background:var(--blue-l);border-color:var(--blue-m)}
-.cat-item-left{display:flex;align-items:center;gap:12px}
+.cat-item-left{display:flex;align-items:center;gap:12px;min-width:0}
 .cat-item-icon{font-size:20px;width:36px;height:36px;background:white;border-radius:9px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-sm)}
 .cat-item-name{font-size:14px;font-weight:600}
 .cat-item-price{font-size:12px;color:var(--ink3);margin-top:2px;font-weight:500}
@@ -217,7 +217,7 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
 .qty-val{width:24px;text-align:center;font-size:13px;font-weight:700;font-family:var(--mono)}
 .line-price-input{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ink2);border:none;outline:none;background:transparent;width:60px;text-align:right}
 .line-total{font-size:14px;font-weight:700;color:var(--blue);min-width:62px;text-align:right;font-family:var(--mono)}
-.line-del{color:var(--ink3);padding:5px;flex-shrink:0;cursor:pointer;font-size:16px;transition:color .15s}
+.line-del{color:var(--ink3);padding:5px;flex-shrink:0;cursor:pointer;font-size:16px;transition:color .15s;border:none;background:transparent}
 .line-del:hover{color:var(--rose)}
 .tva-sel{font-family:var(--font);font-size:11px;font-weight:700;border:1.5px solid var(--border);border-radius:7px;padding:3px 5px;background:white;color:var(--ink2);cursor:pointer}
 
@@ -300,9 +300,20 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
 .drag-handle{width:24px;height:36px;display:flex;align-items:center;justify-content:center;cursor:grab;color:var(--ink3);flex-shrink:0;touch-action:none;font-size:14px}
 .drag-handle:active{cursor:grabbing}
 
+
+.line-move{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.move-btn{width:26px;height:24px;border-radius:8px;border:1px solid var(--border);background:white;color:var(--ink2);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation}
+.move-btn:active{background:var(--blue-l);color:var(--blue);transform:scale(.94)}
+.catalog-manage-actions{display:flex;gap:8px;align-items:center}
+.catalog-row-actions{display:flex;gap:6px;flex-shrink:0}
+.catalog-mini-btn{border:none;border-radius:8px;padding:7px 9px;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--font);touch-action:manipulation}
+.catalog-mini-edit{background:var(--blue-l);color:var(--blue)}
+.catalog-mini-del{background:var(--rose-l);color:var(--rose)}
+.catalog-manager-empty{text-align:center;padding:28px 18px;color:var(--ink3);font-size:13px;line-height:1.5}
+
 /* ── ADDRESS AUTOCOMPLETE ── */
 .addr-wrap{position:relative;flex:1;min-width:0}
-.addr-suggestions{position:absolute;top:100%;left:-48px;right:-16px;background:white;border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:var(--sh-lg);z-index:500;max-height:220px;overflow-y:auto;display:none}
+.addr-suggestions{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:var(--sh-lg);z-index:500;max-height:220px;overflow-y:auto;display:none}
 .addr-suggestions.open{display:block}
 .addr-item{padding:11px 14px;font-size:13px;color:var(--ink);cursor:pointer;border-bottom:1px solid var(--border);line-height:1.4}
 .addr-item:last-child{border-bottom:none}
@@ -331,6 +342,9 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
   </div>
   <button class="lock-btn" onclick="checkPassword()">Déverrouiller</button>
   <div class="lock-error" id="lock-error">❌ Mot de passe incorrect</div>
+  <div style="margin-top:20px;text-align:center">
+    <button onclick="resetPassword()" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:12px;font-family:var(--font);cursor:pointer;text-decoration:underline">Mot de passe oublié ? Réinitialiser</button>
+  </div>
   <div class="lock-footer">DepannPro Pro · Données locales chiffrées</div>
 </div>
 
@@ -712,6 +726,18 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
               </select>
             </div>
           </div>
+          <div class="field" id="f-status-row" style="display:none">
+            <div class="field-icon" style="background:#F5F3FF">🏷️</div>
+            <div class="field-body"><div class="field-label">Statut du document</div>
+              <select class="field-input" id="f-doc-status">
+                <option value="draft">Brouillon</option>
+                <option value="sent">Envoyé</option>
+                <option value="signed">Signé</option>
+                <option value="facture">Facture à encaisser</option>
+                <option value="paid">Facture payée</option>
+              </select>
+            </div>
+          </div>
           <div class="field">
             <div class="field-icon" style="background:#F0FDF4">📋</div>
             <div class="field-body"><div class="field-label">Mentions libres (visibles sur le document)</div>
@@ -822,7 +848,10 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
   <div class="bs-handle"></div>
   <div class="bs-header">
     <div class="bs-title">Catalogue prestations</div>
-    <button onclick="closeCatalogue()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);line-height:1">×</button>
+    <div class="catalog-manage-actions">
+      <button class="btn btn-outline btn-xs" onclick="openCatalogManager()">Gérer le catalogue</button>
+      <button onclick="closeCatalogue()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);line-height:1">×</button>
+    </div>
   </div>
   <div class="bs-body" id="catalogue-body"></div>
   <div style="padding:14px 16px 16px">
@@ -830,6 +859,20 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Prestation personnalisée
     </button>
+  </div>
+</div>
+
+
+<!-- ══════════════════════ GESTION CATALOGUE ══════════════════════ -->
+<div class="bottom-sheet" id="catalog-manager" style="z-index:320">
+  <div class="bs-handle"></div>
+  <div class="bs-header">
+    <div class="bs-title">Gérer le catalogue</div>
+    <button onclick="closeCatalogManager()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ink3);line-height:1">×</button>
+  </div>
+  <div class="bs-body" id="catalog-manager-body"></div>
+  <div style="padding:14px 16px 16px">
+    <button class="btn btn-blue" onclick="addCatalogItemPrompt()">+ Ajouter une prestation pré-enregistrée</button>
   </div>
 </div>
 
@@ -847,11 +890,12 @@ let editId = null;
 let sigDocId = null;
 let sigCanvas, sigCtx, isSigning = false, hasSig = false;
 let fsStep = 0;
+let customCatalogue = JSON.parse(localStorage.getItem('dp3_catalogue_custom') || '[]');
 
 // ══════════════════════════════════════════
 // CATALOGUE
 // ══════════════════════════════════════════
-const CATALOGUE = [
+const DEFAULT_CATALOGUE = [
   { group:'⚡ Main d\'œuvre', items:[
     {icon:'🔧',name:'Main d\'œuvre — 1h',price:80},{icon:'🔧',name:'Main d\'œuvre — 2h',price:150},
     {icon:'🔧',name:'Main d\'œuvre — demi-journée',price:280},{icon:'🚗',name:'Déplacement',price:40},
@@ -916,6 +960,8 @@ function openNewDoc(){
   document.getElementById('f-payment').value='Virement bancaire';
   document.getElementById('f-desc').value='';
   document.getElementById('fs-main-title').textContent='Nouveau devis';
+  const sr=document.getElementById('f-status-row'); if(sr)sr.style.display='none';
+  const st=document.getElementById('f-doc-status'); if(st)st.value='draft';
   renderLines(); gotoStep(0); openFullscreen('fs-new');
 }
 
@@ -926,85 +972,12 @@ function editDoc(id){
   sv('f-email-client',d.emailClient); sv('f-adresse',d.adresse); sv('f-type',d.typeIntervention);
   sv('f-desc',d.desc); sv('f-date',d.date); sv('f-notes',d.notes); sv('f-mentions',d.mentions);
   sv('f-payment',d.payment||'Virement bancaire');
-  document.getElementById('fs-main-title').textContent='Modifier le devis';
+  const sr=document.getElementById('f-status-row'); if(sr)sr.style.display='flex';
+  const st=document.getElementById('f-doc-status'); if(st){ st.value=d.status||'draft'; Array.from(st.options).forEach(o=>{ o.hidden=(d.type==='devis' ? ['facture','paid'].includes(o.value) : ['draft','sent','signed'].includes(o.value)); }); }
+  document.getElementById('fs-main-title').textContent=d.type==='facture'?'Modifier la facture':'Modifier le devis';
   renderLines(); gotoStep(0); openFullscreen('fs-new');
 }
 function sv(id,val){const e=document.getElementById(id);if(e&&val!=null)e.value=val;}
-
-// ── EDIT FACTURE (client info + payment + paid status) ──
-function editFacture(id){
-  const d=docs.find(x=>x.id==id);if(!d)return;
-  // Build a simple modal overlay to edit client + payment + paid status
-  const overlay=document.createElement('div');
-  overlay.id='edit-fac-overlay';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)';
-  overlay.innerHTML=`
-    <div style="background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:430px;padding:0 0 env(safe-area-inset-bottom,16px);max-height:90vh;overflow-y:auto">
-      <div style="width:38px;height:4px;background:var(--border2);border-radius:2px;margin:13px auto 0"></div>
-      <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-        <div style="font-size:17px;font-weight:700">Modifier la facture</div>
-        <button onclick="document.getElementById('edit-fac-overlay').remove()" style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--ink2)">✕</button>
-      </div>
-      <div style="padding:16px 20px">
-        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Informations client</div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="field"><div class="field-icon" style="background:#EEF2FF">👤</div><div class="field-body"><div class="field-label">Nom du client</div><input class="field-input" id="ef-client" value="${esc(d.client||'')}"></div></div>
-          <div class="field"><div class="field-icon" style="background:#F0FDF4">🏢</div><div class="field-body"><div class="field-label">Société</div><input class="field-input" id="ef-company" value="${esc(d.clientCompany||'')}"></div></div>
-          <div class="field"><div class="field-icon" style="background:#FFF7ED">📞</div><div class="field-body"><div class="field-label">Téléphone</div><input class="field-input" id="ef-tel" type="tel" value="${esc(d.tel||'')}"></div></div>
-          <div class="field"><div class="field-icon" style="background:#EFF6FF">📧</div><div class="field-body"><div class="field-label">Email</div><input class="field-input" id="ef-email" type="email" value="${esc(d.emailClient||'')}"></div></div>
-          <div class="field" style="border-bottom:none"><div class="field-icon" style="background:#FFF0EF">📍</div><div class="field-body"><div class="field-label">Adresse</div><input class="field-input" id="ef-adresse" value="${esc(d.adresse||'')}"></div></div>
-        </div>
-        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Paiement</div>
-        <div class="card" style="margin-bottom:16px">
-          <div class="field"><div class="field-icon" style="background:#EEF2FF">💳</div><div class="field-body"><div class="field-label">Mode de règlement</div>
-            <select class="field-input" id="ef-payment">
-              ${['Virement bancaire','Chèque','Espèces','Carte bancaire','PayPal'].map(p=>`<option ${d.payment===p?'selected':''}>${p}</option>`).join('')}
-            </select>
-          </div></div>
-          <div class="field" style="border-bottom:none"><div class="field-icon" style="background:#F0FDF4">✅</div><div class="field-body"><div class="field-label">Statut paiement</div>
-            <select class="field-input" id="ef-status">
-              <option value="facture" ${d.status==='facture'?'selected':''}>À encaisser</option>
-              <option value="paid" ${d.status==='paid'?'selected':''}>Payée</option>
-            </select>
-          </div></div>
-        </div>
-        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Mentions</div>
-        <div class="card" style="margin-bottom:20px">
-          <div class="field" style="border-bottom:none"><div class="field-icon" style="background:#F0FDF4">📋</div><div class="field-body"><div class="field-label">Mentions libres</div><textarea class="field-input" id="ef-mentions" rows="3">${esc(d.mentions||'')}</textarea></div></div>
-        </div>
-        <button class="btn btn-blue" onclick="saveFactureEdits(${id})" style="margin-bottom:8px">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
-          Enregistrer
-        </button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
-}
-
-function saveFactureEdits(id){
-  const d=docs.find(x=>x.id==id);if(!d)return;
-  const gef=id2=>document.getElementById(id2)?.value||'';
-  d.client=gef('ef-client').trim()||d.client;
-  d.clientCompany=gef('ef-company');
-  d.tel=gef('ef-tel');
-  d.emailClient=gef('ef-email');
-  d.adresse=gef('ef-adresse');
-  d.payment=gef('ef-payment');
-  d.mentions=gef('ef-mentions');
-  const newStatus=gef('ef-status');
-  if(newStatus!==d.status){
-    d.status=newStatus;
-    if(newStatus==='paid'&&!d.paidAt)d.paidAt=new Date().toISOString();
-    if(!d.history)d.history=[];
-    d.history.push({date:new Date().toISOString(),action:newStatus==='paid'?'Marquée payée':'Remise en attente',status:newStatus});
-  }
-  if(!d.history)d.history=[];
-  d.history.push({date:new Date().toISOString(),action:'Informations modifiées',status:d.status});
-  saveDocs();renderAll();
-  document.getElementById('edit-fac-overlay')?.remove();
-  toast('✅ Facture mise à jour');
-}
 
 // ══════════════════════════════════════════
 // STEPPER
@@ -1057,16 +1030,7 @@ function addLine(name='',price=0,qty=1){
 }
 
 function removeLine(id){lines=lines.filter(l=>l.id!=id);renderLines();}
-
-function moveLine(id,dir){
-  const idx=lines.findIndex(l=>l.id==id);
-  if(idx<0)return;
-  const newIdx=idx+dir;
-  if(newIdx<0||newIdx>=lines.length)return;
-  const [moved]=lines.splice(idx,1);
-  lines.splice(newIdx,0,moved);
-  renderLines();
-}
+function moveLine(id,dir){const i=lines.findIndex(l=>l.id==id);if(i<0)return;const j=i+dir;if(j<0||j>=lines.length)return;const tmp=lines[i];lines[i]=lines[j];lines[j]=tmp;renderLines();}
 
 function changeQty(id,delta){
   const l=lines.find(x=>x.id==id); if(!l)return;
@@ -1082,10 +1046,14 @@ function renderLines(){
     updateTotals(); return;
   }
   const TVA_OPTS=[{v:'20',l:'20%'},{v:'10',l:'10%'},{v:'5.5',l:'5,5%'},{v:'2.1',l:'2,1%'},{v:'0',l:'0%'}];
-  container.innerHTML=lines.map((l,idx)=>{
+  container.innerHTML=lines.map(l=>{
     const tvaOpts=TVA_OPTS.map(o=>`<option value="${o.v}" ${String(l.tva??getCurrentTva())==o.v?'selected':''}>${o.l}</option>`).join('');
     return `<div class="line-row" id="lr-${l.id}" draggable="true" data-id="${l.id}">
-      <div class="drag-handle" title="Maintenir pour déplacer" style="touch-action:none;cursor:grab;padding:4px 2px;color:var(--ink3);font-size:13px;user-select:none">⋮⋮</div>
+      <div class="drag-handle" title="Maintenir pour déplacer">⋮⋮</div>
+      <div class="line-move" aria-label="Déplacer la prestation">
+        <button class="move-btn" onclick="moveLine(${l.id},-1)" title="Monter">↑</button>
+        <button class="move-btn" onclick="moveLine(${l.id},1)" title="Descendre">↓</button>
+      </div>
       <div class="line-main">
         <input class="line-desc-input" value="${esc(l.name)}" placeholder="Désignation..." oninput="updateLineName(${l.id},this.value)">
         <div class="line-sub">
@@ -1096,12 +1064,8 @@ function renderLines(){
           <select class="tva-sel" onchange="updateLineTva(${l.id},this.value)">${tvaOpts}</select>
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
-        <button onclick="moveLine(${l.id},-1)" style="width:22px;height:22px;border-radius:5px;border:1.5px solid var(--border2);background:white;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--ink2);${idx===0?'opacity:.25;pointer-events:none':''}">▲</button>
-        <button onclick="moveLine(${l.id},1)" style="width:22px;height:22px;border-radius:5px;border:1.5px solid var(--border2);background:white;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--ink2);${idx===lines.length-1?'opacity:.25;pointer-events:none':''}">▼</button>
-      </div>
       <div class="line-total" id="lt-${l.id}">${fmt(l.qty*l.price)}</div>
-      <div class="line-del" onclick="removeLine(${l.id})">✕</div>
+      <button class="line-del" onclick="removeLine(${l.id})" title="Supprimer">✕</button>
     </div>`;
   }).join('');
   initDragReorder(container);
@@ -1144,31 +1108,93 @@ function updateTotals(){
 // ══════════════════════════════════════════
 // CATALOGUE
 // ══════════════════════════════════════════
+function getCatalogue(){
+  const groups=DEFAULT_CATALOGUE.map(g=>({group:g.group,items:[...g.items],custom:false}));
+  if(customCatalogue.length){groups.push({group:'⭐ Mes prestations',items:customCatalogue.map(i=>({...i,icon:i.icon||'⭐'})),custom:true});}
+  return groups;
+}
+function saveCustomCatalogue(){localStorage.setItem('dp3_catalogue_custom',JSON.stringify(customCatalogue));}
 function openCatalogue(){
-  const body=document.getElementById('catalogue-body');
-  body.innerHTML=CATALOGUE.map(g=>`
-    <div class="cat-group">
-      <div class="cat-group-title">${g.group}</div>
-      ${g.items.map(item=>`
-        <div class="cat-item" onclick="addFromCat('${esc(item.name)}',${item.price})">
-          <div class="cat-item-left">
-            <div class="cat-item-icon">${item.icon}</div>
-            <div><div class="cat-item-name">${item.name}</div><div class="cat-item-price">${item.price.toFixed(2)} € HT</div></div>
-          </div>
-          <div class="cat-item-add">+</div>
-        </div>`).join('')}
-    </div>`).join('');
+  renderCatalogue();
   document.getElementById('catalogue').classList.add('open');
   document.getElementById('cat-overlay').classList.add('active');
 }
-
+function renderCatalogue(){
+  const body=document.getElementById('catalogue-body');
+  body.innerHTML=getCatalogue().map(g=>`
+    <div class="cat-group">
+      <div class="cat-group-title">${g.group}</div>
+      ${g.items.map(item=>`
+        <button type="button" class="cat-item" data-name="${esc(item.name)}" data-price="${Number(item.price)||0}">
+          <div class="cat-item-left">
+            <div class="cat-item-icon">${item.icon||'⭐'}</div>
+            <div><div class="cat-item-name">${esc(item.name)}</div><div class="cat-item-price">${(Number(item.price)||0).toFixed(2)} € HT</div></div>
+          </div>
+          <div class="cat-item-add">+</div>
+        </button>`).join('')}
+    </div>`).join('');
+  body.querySelectorAll('.cat-item').forEach(btn=>{
+    btn.addEventListener('click',()=>addFromCat(btn.dataset.name,parseFloat(btn.dataset.price)||0),{passive:true});
+  });
+}
 function closeCatalogue(){
   document.getElementById('catalogue').classList.remove('open');
   document.getElementById('cat-overlay').classList.remove('active');
+  closeCatalogManager();
 }
-
 function addFromCat(name,price){addLine(name,price,1);closeCatalogue();toast(`✅ ${name} ajouté`);}
 function addCustomLine(){addLine('',0,1);closeCatalogue();setTimeout(()=>{const ins=document.querySelectorAll('.line-desc-input');if(ins.length)ins[ins.length-1].focus();},100);}
+function openCatalogManager(){
+  renderCatalogManager();
+  document.getElementById('catalog-manager').classList.add('open');
+}
+function closeCatalogManager(){
+  const m=document.getElementById('catalog-manager');
+  if(m)m.classList.remove('open');
+}
+function renderCatalogManager(){
+  const body=document.getElementById('catalog-manager-body');
+  if(!customCatalogue.length){
+    body.innerHTML='<div class="catalog-manager-empty">Aucune prestation personnalisée pour le moment.<br>Ajoutez vos prestations fréquentes avec leur prix HT.</div>';
+    return;
+  }
+  body.innerHTML=`<div class="cat-group"><div class="cat-group-title">Prestations personnalisées</div>${customCatalogue.map((item,i)=>`
+    <div class="cat-item" style="cursor:default">
+      <div class="cat-item-left">
+        <div class="cat-item-icon">${item.icon||'⭐'}</div>
+        <div><div class="cat-item-name">${esc(item.name)}</div><div class="cat-item-price">${(Number(item.price)||0).toFixed(2)} € HT</div></div>
+      </div>
+      <div class="catalog-row-actions">
+        <button class="catalog-mini-btn catalog-mini-edit" onclick="editCatalogItemPrompt(${i})">Modifier</button>
+        <button class="catalog-mini-btn catalog-mini-del" onclick="deleteCatalogItem(${i})">Suppr.</button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+function addCatalogItemPrompt(){
+  const name=(prompt('Nom de la prestation à ajouter au catalogue :')||'').trim();
+  if(!name)return;
+  const raw=(prompt('Prix HT de cette prestation (€) :','0')||'').replace(',','.');
+  const price=parseFloat(raw);
+  if(isNaN(price)||price<0){toast('⚠️ Prix invalide');return;}
+  customCatalogue.push({id:Date.now(),icon:'⭐',name,price});
+  saveCustomCatalogue();renderCatalogManager();renderCatalogue();toast('✅ Prestation ajoutée au catalogue');
+}
+function editCatalogItemPrompt(i){
+  const item=customCatalogue[i]; if(!item)return;
+  const name=(prompt('Modifier le nom de la prestation :',item.name)||'').trim();
+  if(!name)return;
+  const raw=(prompt('Modifier le prix HT (€) :',String(item.price))||'').replace(',','.');
+  const price=parseFloat(raw);
+  if(isNaN(price)||price<0){toast('⚠️ Prix invalide');return;}
+  customCatalogue[i]={...item,name,price};
+  saveCustomCatalogue();renderCatalogManager();renderCatalogue();toast('✅ Catalogue mis à jour');
+}
+function deleteCatalogItem(i){
+  const item=customCatalogue[i]; if(!item)return;
+  if(!confirm(`Supprimer « ${item.name} » du catalogue ?`))return;
+  customCatalogue.splice(i,1);
+  saveCustomCatalogue();renderCatalogManager();renderCatalogue();toast('🗑 Prestation supprimée');
+}
 
 // ══════════════════════════════════════════
 // RECAP
@@ -1198,8 +1224,10 @@ function saveDoc(status){
   const paymentDelay=parseInt(settings.paymentDelay||30);
   const docDate=gv('f-date')||new Date().toISOString().slice(0,10);
   const dueDate=addDays(docDate,paymentDelay);
+  const docType=isEdit?(existing?.type||'devis'):'devis';
+  const finalStatus=isEdit?(gv('f-doc-status')||existing?.status||status):status;
   const doc={
-    id:editId||Date.now(),type:'devis',status,
+    id:editId||Date.now(),type:docType,status:finalStatus,
     number:isEdit?existing?.number:genNum('DEV'),
     client,clientCompany:gv('f-client-company'),
     tel:gv('f-tel'),emailClient:gv('f-email-client'),
@@ -1212,18 +1240,19 @@ function saveDoc(status){
     ht,tvaMap,tvaTotal,ttc,exoLabel,
     createdAt:isEdit?existing?.createdAt:new Date().toISOString(),
     signature:null,invoiceId:null,
-    history:[{date:new Date().toISOString(),action:isEdit?'Modifié':'Créé',status}],
+    paidAt:finalStatus==='paid'?(existing?.paidAt||new Date().toISOString()):null,
+    history:[{date:new Date().toISOString(),action:isEdit?'Modifié':'Créé',status:finalStatus}],
   };
   if(isEdit){
     const prev=docs.find(d=>d.id==editId);
     doc.signature=prev?.signature;doc.invoiceId=prev?.invoiceId;
-    doc.history=[...(prev?.history||[]),{date:new Date().toISOString(),action:'Modifié',status}];
+    doc.history=[...(prev?.history||[]),{date:new Date().toISOString(),action:'Modifié',status:finalStatus}];
     const i=docs.findIndex(d=>d.id==editId);docs[i]=doc;
   } else {
     docs.unshift(doc);
   }
   saveDocs();closeFullscreen('fs-new');renderAll();
-  toast(status==='draft'?'💾 Brouillon enregistré':'📤 Devis enregistré');
+  toast(isEdit?'✅ Document modifié':(status==='draft'?'💾 Brouillon enregistré':'📤 Devis enregistré'));
 }
 
 function genNum(prefix){
@@ -1333,6 +1362,7 @@ function openSuivi(id){
       <div style="font-size:14px;color:var(--ink2);line-height:1.6">${d.notes}</div>
     </div>`:''}
     <div style="padding-top:16px;display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-outline" onclick="editDoc(${d.id});closeFullscreen('fs-suivi')">✏️ Modifier le document</button>
       <button class="btn btn-blue" onclick="previewDoc(${d.id})">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         Aperçu / Imprimer
@@ -1341,7 +1371,6 @@ function openSuivi(id){
       ${d.type==='devis'&&d.status==='sent'?`<button class="btn btn-green" onclick="openSign(${d.id});closeFullscreen('fs-suivi')">✍️ Faire signer</button>`:''}
       ${d.type==='devis'&&d.status==='signed'&&!d.invoiceId?`<button class="btn btn-outline" onclick="convertToInvoice(${d.id});closeFullscreen('fs-suivi')">🧾 Convertir en facture</button>`:''}
       ${d.type==='facture'&&d.status!=='paid'?`<button class="btn btn-green" onclick="markPaid(${d.id});closeFullscreen('fs-suivi')">💰 Marquer payée</button>`:''}
-      ${d.type==='facture'?`<button class="btn btn-outline" onclick="editFacture(${d.id})">✏️ Modifier la facture</button>`:''}
       ${d.type==='devis'&&d.status==='draft'?`<button class="btn btn-outline" onclick="markSent(${d.id});closeFullscreen('fs-suivi')">📤 Marquer envoyé</button>`:''}
     </div>`;
   openFullscreen('fs-suivi');
@@ -1449,7 +1478,7 @@ function buildA4Html(d){
       <div style="font-size:11px;color:#9499AA">Date et signature précédées de la mention « Bon pour accord »</div>
     </div>`:'');
 
-  return `<div style="width:210mm;min-height:297mm;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto">
+  return `<div style="width:210mm;min-height:297mm;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative">
 
     <!-- BANDE LATERALE COULEUR -->
     <div style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${accent}"></div>
@@ -1555,12 +1584,11 @@ function buildA4Html(d){
     </div>`:''}
 
     <!-- FOOTER -->
-    <div style="margin-top:24px;border-top:1px solid #E2E4EA;padding-top:12px;page-break-inside:avoid">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
-        <div style="font-size:10px;color:#9499AA;line-height:1.7;max-width:340px">
+    <div style="margin-top:28px;padding-top:12px;border-top:1px solid #E2E4EA">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end">
+        <div style="font-size:10px;color:#9499AA;line-height:1.7">
           ${s.assurance?`<div>Assurance : ${s.assurance}</div>`:''}
-          ${s.conditions?`<div>${s.conditions}</div>`:''}
-          ${d.exoLabel?`<div><em>${d.exoLabel}</em></div>`:''}
+          ${s.conditions?`<div style="max-width:320px">${s.conditions}</div>`:''}
         </div>
         <div style="font-size:10px;color:#9499AA;text-align:right">
           <div style="font-weight:700;color:#4B5060">${s.company||''}</div>
@@ -1752,13 +1780,13 @@ function docCard(d){
   let actions=`<button class="action-btn ab-blue" onclick="openSuivi(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>Suivi</button>`;
   actions+=`<button class="action-btn ab-blue" onclick="previewDoc(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Aperçu</button>`;
   if(d.emailClient)actions+=`<button class="action-btn ab-violet" onclick="sendByEmail(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9 22,2"/></svg>Email</button>`;
+  actions+=`<button class="action-btn ab-blue" onclick="editDoc(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>`;
   if(isDevis){
-    if(d.status==='draft')actions+=`<button class="action-btn ab-blue" onclick="editDoc(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>`;
+    if(false)actions+=`<button class="action-btn ab-blue" onclick="editDoc(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>`;
     if(d.status==='draft')actions+=`<button class="action-btn ab-orange" onclick="markSent(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9 22,2"/></svg>Envoyé</button>`;
     if(d.status==='sent')actions+=`<button class="action-btn ab-green" onclick="openSign(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Signer</button>`;
     if(d.status==='signed'&&!d.invoiceId)actions+=`<button class="action-btn ab-orange" onclick="convertToInvoice(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>→ Fact.</button>`;
   } else {
-    actions+=`<button class="action-btn ab-blue" onclick="editFacture(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>`;
     if(d.status!=='paid')actions+=`<button class="action-btn ab-gold" onclick="markPaid(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Payée</button>`;
   }
   actions+=`<button class="action-btn ab-red" onclick="deleteDoc(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>Suppr.</button>`;
@@ -1994,6 +2022,12 @@ function changePassword(){
   document.getElementById('set-new-pw').value='';
   toast('🔐 Mot de passe mis à jour !');
 }
+function resetPassword(){
+  if(!confirm('Réinitialiser le mot de passe ?\n\nVos données restent intactes. Vous pourrez en définir un nouveau dans Réglages.'))return;
+  localStorage.removeItem(APP_PASSWORD_KEY);
+  document.getElementById('lock-screen').classList.add('hidden');
+  toast('🔓 Accès ouvert — définissez un nouveau mot de passe dans Réglages');
+}
 // ══════════════════════════════════════════
 function handleLogoUpload(input){
   const file=input.files[0];if(!file)return;
@@ -2028,6 +2062,12 @@ function deleteLogo(){
 // INIT
 // ══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
+  // Si le hash stocké est au format SHA-256 (64 caractères hex) d'une version précédente, on le supprime
+  const storedPw=localStorage.getItem(APP_PASSWORD_KEY);
+  if(storedPw && /^[0-9a-f]{64}$/.test(storedPw)){
+    localStorage.removeItem(APP_PASSWORD_KEY);
+    document.getElementById('lock-sub')&&(document.getElementById('lock-sub').textContent='Votre mot de passe a été réinitialisé suite à une mise à jour. Veuillez le redéfinir.');
+  }
   // Migrate from v2 data if exists
   const oldDocs=localStorage.getItem('dp2_docs');
   const oldSettings=localStorage.getItem('dp2_settings');
