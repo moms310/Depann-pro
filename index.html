@@ -884,6 +884,16 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
 <div class="toast" id="toast"></div>
 <div id="a4-template" class="a4-doc"></div>
 
+<!-- Modal aide envoi mail -->
+<div id="mail-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.5);align-items:flex-end;justify-content:center">
+  <div style="background:white;border-radius:22px 22px 0 0;padding:28px 24px 40px;width:100%;max-width:430px;margin:0 auto">
+    <div style="font-size:24px;text-align:center;margin-bottom:12px">📎</div>
+    <div style="font-size:17px;font-weight:800;text-align:center;margin-bottom:8px;letter-spacing:-.3px">PDF enregistré dans Fichiers</div>
+    <div style="font-size:14px;color:#4B5060;text-align:center;line-height:1.6;margin-bottom:24px">Mail s'ouvre avec le destinataire et le texte pré-remplis.<br>Joignez le PDF depuis l'icône <strong>📎</strong> → Fichiers.</div>
+    <button onclick="document.getElementById('mail-modal').style.display='none'" style="width:100%;background:#2563EB;color:white;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;font-family:var(--font);cursor:pointer">OK, compris</button>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 // DATA
@@ -1613,50 +1623,27 @@ ${s.company||''}${s.phone?'\n'+s.phone:''}${s.email?'\n'+s.email:''}`;
     const { blob, title } = await generatePdfBlob(id);
     const fileName = title+'.pdf';
 
-    // Convertir le blob PDF en base64
-    const base64Pdf = await new Promise((res,rej)=>{
-      const reader = new FileReader();
-      reader.onload = ()=> res(reader.result.split(',')[1]);
-      reader.onerror = rej;
-      reader.readAsDataURL(blob);
-    });
-
-    // Construire le fichier .eml complet (RFC 2822)
-    const boundary = 'DepannPro_' + Date.now();
-    const emlLines = [
-      `To: ${d.emailClient}`,
-      `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
-      `MIME-Version: 1.0`,
-      `Content-Type: multipart/mixed; boundary="${boundary}"`,
-      ``,
-      `--${boundary}`,
-      `Content-Type: text/plain; charset=UTF-8`,
-      `Content-Transfer-Encoding: base64`,
-      ``,
-      btoa(unescape(encodeURIComponent(bodyText))).match(/.{1,76}/g).join('\r\n'),
-      ``,
-      `--${boundary}`,
-      `Content-Type: application/pdf; name="${fileName}"`,
-      `Content-Transfer-Encoding: base64`,
-      `Content-Disposition: attachment; filename="${fileName}"`,
-      ``,
-      base64Pdf.match(/.{1,76}/g).join('\r\n'),
-      ``,
-      `--${boundary}--`,
-    ].join('\r\n');
-
-    // Ouvrir directement dans Mail via blob URL avec type message/rfc822
-    // iOS reconnaît ce MIME type et ouvre Mail avec tout pré-rempli + PJ
-    const emlBlob = new Blob([emlLines], { type: 'message/rfc822' });
-    const emlUrl = URL.createObjectURL(emlBlob);
+    // 1) Télécharger le PDF dans Fichiers
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = emlUrl;
-    a.download = title + '.eml';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(emlUrl), 10000);
-    toast('📧 Ouverture de Mail…');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 10000);
+
+    // 2) Ouvrir Mail avec destinataire + objet + corps pré-remplis
+    // (iOS Safari supporte mailto: avec ces paramètres)
+    setTimeout(()=>{
+      window.location.href = `mailto:${encodeURIComponent(d.emailClient)}`
+        +`?subject=${encodeURIComponent(subject)}`
+        +`&body=${encodeURIComponent(bodyText)}`;
+    }, 500);
+
+    // Afficher une modale claire avec les instructions
+    setTimeout(()=>{
+      const m = document.getElementById('mail-modal');
+      if(m){ m.style.display='flex'; }
+    }, 1200);
+
   } catch(e){
     if(e.name !== 'AbortError') toast('❌ Erreur : '+e.message);
   }
