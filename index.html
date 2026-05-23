@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DepannPro">
 <title>DepannPro Pro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -102,7 +104,9 @@ body{font-family:var(--font);color:var(--ink);max-width:430px;margin:0 auto;posi
 
 /* ── CARDS ── */
 .card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-sm);border:1px solid var(--border)}
+.card+.card{margin-top:10px}
 .stat-card{height:110px!important;min-height:110px!important;max-height:110px!important;overflow:hidden!important;margin-top:0!important}
+.stat-card+.stat-card{margin-top:0!important}
 
 /* ── DOC CARDS ── */
 .doc-card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-sm);border:1px solid var(--border);margin-bottom:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s}
@@ -1410,43 +1414,168 @@ function scalePreview(){
   },60);
 }
 
-function doPrint(){
-  const title=document.getElementById('preview-title').textContent;
-  const content=document.getElementById('preview-a4').innerHTML;
-  const html=`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title}</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    @page{size:A4;margin:0}
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;font-family:'DM Sans',Helvetica,Arial,sans-serif}
-    body{background:white}
-    .doc-wrap{background:white;width:210mm;min-height:297mm;margin:0 auto}
-    @media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}
-  </style></head><body><div class="doc-wrap">${content}</div></body></html>`;
+// ══════════════════════════════════════════
+// GÉNÉRATION PDF (html2canvas + jsPDF)
+// ══════════════════════════════════════════
+async function generatePdfBlob(docId){
+  const d = docId ? docs.find(x=>x.id==docId) : null;
+  const a4Content = d ? buildA4Html(d) : document.getElementById('preview-a4').innerHTML;
+  const title = d
+    ? (d.type==='facture'?'Facture':'Devis')+'_'+d.number
+    : document.getElementById('preview-title').textContent.replace(/\s+/g,'_');
 
-  // Web Share API (iOS/Android natif — feuille de partage)
-  if(navigator.share){
-    const blob=new Blob([html],{type:'text/html'});
-    const file=new File([blob],title.replace(/\s+/g,'_')+'.html',{type:'text/html'});
-    navigator.share({title,files:[file]}).catch(()=>fallbackPrint(html,title));
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:auto;border:none;visibility:hidden;overflow:hidden';
+  document.body.appendChild(iframe);
+
+  await new Promise(resolve => {
+    iframe.onload = resolve;
+    iframe.srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+      +'<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">'
+      +'<style>*{box-sizing:border-box;margin:0;padding:0}html,body{width:794px;background:white;font-family:\'DM Sans\',sans-serif}body{overflow:visible!important}</style>'
+      +'</head><body>'+a4Content+'</body></html>';
+  });
+
+  // Attendre polices + layout
+  await new Promise(r => setTimeout(r, 1000));
+
+  // Mesurer la vraie hauteur du contenu puis redimensionner l'iframe
+  const contentH = iframe.contentDocument.body.scrollHeight;
+  iframe.style.height = contentH + 'px';
+  await new Promise(r => setTimeout(r, 100));
+
+  const canvas = await html2canvas(iframe.contentDocument.body, {
+    scale: 2, useCORS: true, allowTaint: true,
+    width: 794, height: contentH,
+    windowWidth: 794, windowHeight: contentH,
+    backgroundColor: '#ffffff', logging: false
+  });
+  document.body.removeChild(iframe);
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pdfW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const imgH_mm = (canvas.height / canvas.width) * pdfW;
+
+  if(imgH_mm <= pageH){
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.97), 'JPEG', 0, 0, pdfW, imgH_mm);
   } else {
-    fallbackPrint(html,title);
+    const pageH_px = Math.round(canvas.width * pageH / pdfW);
+    let srcY = 0;
+    while(srcY < canvas.height){
+      const sliceH = Math.min(pageH_px, canvas.height - srcY);
+      const sl = document.createElement('canvas');
+      sl.width = canvas.width; sl.height = sliceH;
+      sl.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      const slH_mm = (sliceH / canvas.width) * pdfW;
+      pdf.addImage(sl.toDataURL('image/jpeg', 0.97), 'JPEG', 0, 0, pdfW, slH_mm);
+      srcY += sliceH;
+      if(srcY < canvas.height) pdf.addPage();
+    }
+  }
+
+  return { blob: pdf.output('blob'), title };
+}
+
+async function doPrint(){
+  toast('⏳ Génération du PDF…');
+  try {
+    const { blob, title } = await generatePdfBlob(null);
+    await sharePdfBlob(blob, title);
+  } catch(e){
+    if(e.name !== 'AbortError') toast('❌ Erreur : '+e.message);
   }
 }
 
-function fallbackPrint(html,title){
-  const w=window.open('','_blank','width=960,height=1200');
-  if(!w){toast('⚠️ Autorisez les pop-ups pour imprimer');return;}
-  w.document.write(html.replace('</body>',`
-  <div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:16px 24px;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-top:1px solid #e2e4ea;display:flex;gap:12px;justify-content:center">
-    <button onclick="window.print()" style="background:#2563EB;color:white;border:none;padding:13px 36px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">🖨️ Imprimer / PDF</button>
-    <button onclick="window.close()" style="background:#f4f5f8;color:#4b5060;border:1px solid #e2e4ea;padding:13px 24px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif">Fermer</button>
-  </div></body>`));
-  w.document.close();
+// Partage/téléchargement universel d'un blob PDF
+async function sharePdfBlob(blob, title){
+  const fileName = title.endsWith('.pdf') ? title : title+'.pdf';
+  const file = new File([blob], fileName, { type:'application/pdf' });
+  // Web Share API niveau 2 (iOS 15+, Android Chrome) : feuille de partage native avec le PDF
+  if(navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
+    await navigator.share({ title: title, files:[file] });
+  } else {
+    // Fallback universel : ouverture du PDF dans un nouvel onglet / téléchargement
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+    toast('💾 PDF téléchargé');
+  }
 }
 
-// ══════════════════════════════════════════
-// BUILD A4 HTML - QUALITÉ PROFESSIONNELLE
+async function sendByEmail(id){
+  const d = docs.find(x=>x.id==id); if(!d) return;
+  if(!d.emailClient){ toast('⚠️ Aucun email client renseigné'); return; }
+  const s = settings;
+  const isF = d.type==='facture';
+  const subject = `${isF?'Facture':'Devis'} ${d.number} — ${s.company||''}`.trim();
+  const {ttc} = computeTotals(d.lines||[]);
+  const lignes = (d.lines||[]).map(l=>`• ${l.name} (x${l.qty}) : ${(l.qty*l.price).toFixed(2)} €`).join('\n');
+  const body =
+`Bonjour ${d.client},
+
+Veuillez trouver ci-joint votre ${isF?'facture':'devis'} ${d.number}.
+
+— RÉCAPITULATIF —
+${lignes}
+
+Total TTC : ${ttc.toFixed(2)} €
+${isF&&d.dueDate?`Échéance : ${fmtDate(d.dueDate)}`:`Validité : ${d.validity||30} jours`}
+${isF&&d.payment?`Règlement : ${d.payment}`:''}
+${s.iban&&isF?`IBAN : ${s.iban}`:''}
+
+Cordialement,
+${s.company||''}${s.phone?'\n'+s.phone:''}${s.email?'\n'+s.email:''}`;
+
+  toast('⏳ Génération du PDF…');
+  try {
+    const { blob, title } = await generatePdfBlob(id);
+    const fileName = title+'.pdf';
+    const file = new File([blob], fileName, { type:'application/pdf' });
+
+    // Sur iOS/Android : on partage le PDF via la feuille native.
+    // L'utilisateur choisit Mail → le PDF arrive automatiquement en pièce jointe.
+    // On ne peut pas pré-remplir destinataire+sujet+corps ET joindre un fichier
+    // via le web (limitation OS) — on place le corps dans le champ "text" du share
+    // pour que l'utilisateur puisse le copier-coller si besoin.
+    if(navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({
+        title: subject,
+        text: body,
+        files: [file]
+      });
+      // Après fermeture de la feuille, on propose d'ouvrir Mail avec sujet+corps pré-remplis
+      setTimeout(()=>{
+        if(confirm('Voulez-vous ouvrir votre application Mail avec le sujet et le corps pré-remplis ?\n(Le PDF sera à re-joindre depuis vos fichiers)')){
+          window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        }
+      }, 800);
+    } else {
+      // Fallback desktop/navigateur sans Web Share : télécharge le PDF puis ouvre mailto
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url), 3000);
+      setTimeout(()=>{
+        window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      }, 600);
+      toast('💾 PDF téléchargé — joignez-le à votre mail');
+    }
+  } catch(e){
+    if(e.name !== 'AbortError'){
+      window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      toast('📧 Mail ouvert — joignez le PDF manuellement');
+    }
+  }
+}
 // ══════════════════════════════════════════
 function buildA4Html(d){
   const s=settings;
@@ -1883,41 +2012,6 @@ function pickAddr(inputId,sugId,lbl){
 function closeAddrSug(sugId){
   const s=document.getElementById(sugId);
   if(s)s.classList.remove('open');
-}
-
-// ══════════════════════════════════════════
-// SEND BY EMAIL (mailto: avec corps HTML)
-// ══════════════════════════════════════════
-function sendByEmail(id){
-  const d=docs.find(x=>x.id==id);if(!d)return;
-  if(!d.emailClient){toast('⚠️ Aucun email client renseigné');return;}
-  const s=settings;
-  const isF=d.type==='facture';
-  const label=isF?'facture':'devis';
-  const subject=`${isF?'Facture':'Devis'} ${d.number} — ${s.company||''}`.trim();
-  const {ttc}=computeTotals(d.lines||[]);
-  const lignes=(d.lines||[]).map(l=>`• ${l.name} (x${l.qty}) : ${(l.qty*l.price).toFixed(2)} €`).join('\n');
-  const body=
-`Bonjour ${d.client},
-
-Veuillez trouver ci-dessous le récapitulatif de votre ${label} ${d.number}.
-
-— RÉCAPITULATIF —
-${lignes}
-
-Total TTC : ${ttc.toFixed(2)} €
-${isF&&d.dueDate?`Échéance de paiement : ${fmtDate(d.dueDate)}`:`Validité : ${d.validity||30} jours`}
-${isF&&d.payment?`Mode de règlement : ${d.payment}`:''}
-${s.iban&&isF?`IBAN : ${s.iban}`:''}
-
-Pour visualiser ou imprimer ce document, merci de nous contacter.
-
-Cordialement,
-${s.company||''}${s.phone?'\n'+s.phone:''}${s.email?'\n'+s.email:''}`;
-
-  const mailto=`mailto:${d.emailClient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.location.href=mailto;
-  toast('📧 Ouverture de votre application mail…');
 }
 
 // ══════════════════════════════════════════
