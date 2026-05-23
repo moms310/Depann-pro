@@ -1595,50 +1595,78 @@ async function sendByEmail(id){
   if(!d.emailClient){ toast('⚠️ Aucun email client renseigné'); return; }
   const s = settings;
   const isF = d.type==='facture';
-  const subject = `${isF?'Facture':'Devis'} ${d.number} — ${s.company||''}`.trim();
+  const subject = `${isF?'Votre facture':'Votre devis'} ${s.company||''}`.trim();
   const {ttc} = computeTotals(d.lines||[]);
-  const lignes = (d.lines||[]).map(l=>`• ${l.name} (x${l.qty}) : ${(l.qty*l.price).toFixed(2)} €`).join('\n');
-  const body =
+  const bodyText =
 `Bonjour ${d.client},
 
 Veuillez trouver ci-joint votre ${isF?'facture':'devis'} ${d.number}.
 
-— RÉCAPITULATIF —
-${lignes}
+Nous restons à votre disposition pour toute précision.
 
-Total TTC : ${ttc.toFixed(2)} €
-${isF&&d.dueDate?`Échéance : ${fmtDate(d.dueDate)}`:`Validité : ${d.validity||30} jours`}
-${isF&&d.payment?`Règlement : ${d.payment}`:''}
-${s.iban&&isF?`IBAN : ${s.iban}`:''}
+En vous remerciant de votre confiance.
 
-Cordialement,
+Bien cordialement,
 ${s.company||''}${s.phone?'\n'+s.phone:''}${s.email?'\n'+s.email:''}`;
 
   toast('⏳ Génération du PDF…');
   try {
     const { blob, title } = await generatePdfBlob(id);
     const fileName = title+'.pdf';
-    const file = new File([blob], fileName, { type:'application/pdf' });
 
-    // Sur iOS/Android : on partage le PDF via la feuille native.
-    // L'utilisateur choisit Mail → le PDF arrive automatiquement en pièce jointe.
-    // On ne peut pas pré-remplir destinataire+sujet+corps ET joindre un fichier
-    // via le web (limitation OS) — on place le corps dans le champ "text" du share
-    // pour que l'utilisateur puisse le copier-coller si besoin.
-    // Télécharger le PDF + ouvrir Mail avec sujet et corps pré-remplis
-    const url = URL.createObjectURL(blob);
+    // Convertir le blob PDF en base64
+    const base64Pdf = await new Promise((res,rej)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> res(reader.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    });
+
+    // Construire un fichier .eml (RFC 2822) avec le PDF en pièce jointe
+    // iOS Mail reconnaît ce format et ouvre le mail pré-rempli avec la PJ
+    const boundary = 'DepannPro_' + Date.now();
+    const emlContent = [
+      `To: ${d.emailClient}`,
+      `Subject: ${subject}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      ``,
+      `--${boundary}`,
+      `Content-Type: text/plain; charset=UTF-8`,
+      `Content-Transfer-Encoding: quoted-printable`,
+      ``,
+      bodyText,
+      ``,
+      `--${boundary}`,
+      `Content-Type: application/pdf; name="${fileName}"`,
+      `Content-Transfer-Encoding: base64`,
+      `Content-Disposition: attachment; filename="${fileName}"`,
+      ``,
+      // Découper la base64 en lignes de 76 caractères (standard MIME)
+      base64Pdf.match(/.{1,76}/g).join('\r\n'),
+      ``,
+      `--${boundary}--`,
+    ].join('\r\n');
+
+    const emlBlob = new Blob([emlContent], { type: 'message/rfc822' });
+    const emlFile = new File([emlBlob], title+'.eml', { type: 'message/rfc822' });
+
+    // Essayer le partage natif avec le .eml (fonctionne sur iOS)
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[emlFile]})){
+      await navigator.share({ files: [emlFile] });
+      return;
+    }
+
+    // Fallback : télécharger le .eml (double-clic l'ouvre dans Mail sur Mac/iOS)
+    const url = URL.createObjectURL(emlBlob);
     const a = document.createElement('a');
-    a.href = url; a.download = fileName;
+    a.href = url; a.download = title+'.eml';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 5000);
-    setTimeout(()=>{
-      window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    }, 800);
-    toast('💾 PDF téléchargé — joignez-le à votre mail');
+    toast('📧 Fichier mail généré — ouvrez-le pour envoyer');
   } catch(e){
     if(e.name !== 'AbortError'){
-      window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      toast('📧 Mail ouvert — joignez le PDF manuellement');
+      toast('❌ Erreur : '+e.message);
     }
   }
 }
