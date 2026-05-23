@@ -1444,15 +1444,29 @@ async function generatePdfBlob(docId){
     +'<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">'
     +'<style>'+iframeCSS+'</style></head><body>'+a4Content+'</body></html>';
 
-  // ── Étape 1 : mesurer via un div caché dans le DOM courant (plus fiable qu'un iframe hors écran) ──
-  const measurer = document.createElement('div');
-  measurer.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;visibility:hidden;pointer-events:none;z-index:-1';
-  measurer.innerHTML = a4Content;
-  document.body.appendChild(measurer);
-  await new Promise(r => setTimeout(r, 100)); // laisser le layout se calculer
-  const pageEl = measurer.querySelector('[data-a4page]');
-  const rawH = pageEl ? pageEl.offsetHeight : measurer.offsetHeight;
-  document.body.removeChild(measurer);
+  // ── Étape 1 : mesurer via l'aperçu déjà rendu dans le DOM (width:794px garanti) ──
+  // Si l'aperçu est disponible on l'utilise directement, sinon on fait un iframe probe
+  let rawH = 0;
+  const previewPageEl = document.querySelector('#preview-a4 [data-a4page]');
+  if(previewPageEl){
+    // Lire la largeur réelle de l'élément dans le DOM scalé
+    // offsetHeight est en px avant scale transform → valeur correcte
+    rawH = previewPageEl.offsetHeight;
+  } else {
+    // Fallback : iframe probe isolé avec reset CSS pour éviter l'héritage de l'app
+    const probeCSS = '*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}'
+      +'html,body{width:'+A4_W+'px;max-width:'+A4_W+'px;background:white;overflow:visible}';
+    const probedoc = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+      +'<style>'+probeCSS+'</style></head><body>'+a4Content+'</body></html>';
+    const probe = document.createElement('iframe');
+    probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:'+A4_H+'px;border:none;visibility:hidden;overflow:visible';
+    document.body.appendChild(probe);
+    await new Promise(r => { probe.onload = r; probe.srcdoc = probedoc; });
+    await new Promise(r => setTimeout(r, 500));
+    const el = probe.contentDocument.querySelector('[data-a4page]');
+    rawH = el ? el.offsetHeight : probe.contentDocument.body.offsetHeight;
+    document.body.removeChild(probe);
+  }
 
   // ── Étape 2 : nb de pages A4 (1 page = 1123px à 96dpi) ──
   const nbPages = Math.max(1, Math.ceil(rawH / A4_H));
@@ -1517,23 +1531,18 @@ async function doPrint(){
 // Partage/téléchargement universel d'un blob PDF
 async function sharePdfBlob(blob, title){
   const fileName = title.endsWith('.pdf') ? title : title+'.pdf';
-  const file = new File([blob], fileName, { type:'application/pdf' });
-  // Web Share API niveau 2 (iOS 15+, Android Chrome) : feuille de partage native avec le PDF
-  if(navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
-    await navigator.share({ files:[file] });
-  } else {
-    // Fallback universel : ouverture du PDF dans un nouvel onglet / téléchargement
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 3000);
-    toast('💾 PDF téléchargé');
-  }
+  // Sur iOS : ouvrir le PDF dans un nouvel onglet via blob URL
+  // → l'utilisateur utilise le bouton natif iOS pour partager/enregistrer
+  // Cela évite le bug iOS Web Share qui crée un fichier texte parasite
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
 }
 
 async function sendByEmail(id){
@@ -1571,26 +1580,16 @@ ${s.company||''}${s.phone?'\n'+s.phone:''}${s.email?'\n'+s.email:''}`;
     // On ne peut pas pré-remplir destinataire+sujet+corps ET joindre un fichier
     // via le web (limitation OS) — on place le corps dans le champ "text" du share
     // pour que l'utilisateur puisse le copier-coller si besoin.
-    if(navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
-      await navigator.share({ files: [file] });
-      // Après fermeture de la feuille, on propose d'ouvrir Mail avec sujet+corps pré-remplis
-      setTimeout(()=>{
-        if(confirm('Voulez-vous ouvrir votre application Mail avec le sujet et le corps pré-remplis ?\n(Le PDF sera à re-joindre depuis vos fichiers)')){
-          window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        }
-      }, 800);
-    } else {
-      // Fallback desktop/navigateur sans Web Share : télécharge le PDF puis ouvre mailto
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = fileName;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(()=>URL.revokeObjectURL(url), 3000);
-      setTimeout(()=>{
-        window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      }, 600);
-      toast('💾 PDF téléchargé — joignez-le à votre mail');
-    }
+    // Télécharger le PDF + ouvrir Mail avec sujet et corps pré-remplis
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    setTimeout(()=>{
+      window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    }, 800);
+    toast('💾 PDF téléchargé — joignez-le à votre mail');
   } catch(e){
     if(e.name !== 'AbortError'){
       window.location.href = `mailto:${encodeURIComponent(d.emailClient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
