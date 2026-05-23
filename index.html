@@ -1520,7 +1520,7 @@ async function sharePdfBlob(blob, title){
   const file = new File([blob], fileName, { type:'application/pdf' });
   // Web Share API niveau 2 (iOS 15+, Android Chrome) : feuille de partage native avec le PDF
   if(navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
-    await navigator.share({ title: title, files:[file] });
+    await navigator.share({ files:[file] });
   } else {
     // Fallback universel : ouverture du PDF dans un nouvel onglet / téléchargement
     const url = URL.createObjectURL(blob);
@@ -1572,11 +1572,7 @@ ${s.company||''}${s.phone?'\n'+s.phone:''}${s.email?'\n'+s.email:''}`;
     // via le web (limitation OS) — on place le corps dans le champ "text" du share
     // pour que l'utilisateur puisse le copier-coller si besoin.
     if(navigator.share && navigator.canShare && navigator.canShare({ files:[file] })){
-      await navigator.share({
-        title: subject,
-        text: body,
-        files: [file]
-      });
+      await navigator.share({ files: [file] });
       // Après fermeture de la feuille, on propose d'ouvrir Mail avec sujet+corps pré-remplis
       setTimeout(()=>{
         if(confirm('Voulez-vous ouvrir votre application Mail avec le sujet et le corps pré-remplis ?\n(Le PDF sera à re-joindre depuis vos fichiers)')){
