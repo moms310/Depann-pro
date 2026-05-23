@@ -931,6 +931,81 @@ function editDoc(id){
 }
 function sv(id,val){const e=document.getElementById(id);if(e&&val!=null)e.value=val;}
 
+// ── EDIT FACTURE (client info + payment + paid status) ──
+function editFacture(id){
+  const d=docs.find(x=>x.id==id);if(!d)return;
+  // Build a simple modal overlay to edit client + payment + paid status
+  const overlay=document.createElement('div');
+  overlay.id='edit-fac-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)';
+  overlay.innerHTML=`
+    <div style="background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-width:430px;padding:0 0 env(safe-area-inset-bottom,16px);max-height:90vh;overflow-y:auto">
+      <div style="width:38px;height:4px;background:var(--border2);border-radius:2px;margin:13px auto 0"></div>
+      <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:17px;font-weight:700">Modifier la facture</div>
+        <button onclick="document.getElementById('edit-fac-overlay').remove()" style="width:32px;height:32px;border-radius:50%;background:var(--bg);border:1px solid var(--border);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--ink2)">✕</button>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Informations client</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="field"><div class="field-icon" style="background:#EEF2FF">👤</div><div class="field-body"><div class="field-label">Nom du client</div><input class="field-input" id="ef-client" value="${esc(d.client||'')}"></div></div>
+          <div class="field"><div class="field-icon" style="background:#F0FDF4">🏢</div><div class="field-body"><div class="field-label">Société</div><input class="field-input" id="ef-company" value="${esc(d.clientCompany||'')}"></div></div>
+          <div class="field"><div class="field-icon" style="background:#FFF7ED">📞</div><div class="field-body"><div class="field-label">Téléphone</div><input class="field-input" id="ef-tel" type="tel" value="${esc(d.tel||'')}"></div></div>
+          <div class="field"><div class="field-icon" style="background:#EFF6FF">📧</div><div class="field-body"><div class="field-label">Email</div><input class="field-input" id="ef-email" type="email" value="${esc(d.emailClient||'')}"></div></div>
+          <div class="field" style="border-bottom:none"><div class="field-icon" style="background:#FFF0EF">📍</div><div class="field-body"><div class="field-label">Adresse</div><input class="field-input" id="ef-adresse" value="${esc(d.adresse||'')}"></div></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Paiement</div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="field"><div class="field-icon" style="background:#EEF2FF">💳</div><div class="field-body"><div class="field-label">Mode de règlement</div>
+            <select class="field-input" id="ef-payment">
+              ${['Virement bancaire','Chèque','Espèces','Carte bancaire','PayPal'].map(p=>`<option ${d.payment===p?'selected':''}>${p}</option>`).join('')}
+            </select>
+          </div></div>
+          <div class="field" style="border-bottom:none"><div class="field-icon" style="background:#F0FDF4">✅</div><div class="field-body"><div class="field-label">Statut paiement</div>
+            <select class="field-input" id="ef-status">
+              <option value="facture" ${d.status==='facture'?'selected':''}>À encaisser</option>
+              <option value="paid" ${d.status==='paid'?'selected':''}>Payée</option>
+            </select>
+          </div></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px">Mentions</div>
+        <div class="card" style="margin-bottom:20px">
+          <div class="field" style="border-bottom:none"><div class="field-icon" style="background:#F0FDF4">📋</div><div class="field-body"><div class="field-label">Mentions libres</div><textarea class="field-input" id="ef-mentions" rows="3">${esc(d.mentions||'')}</textarea></div></div>
+        </div>
+        <button class="btn btn-blue" onclick="saveFactureEdits(${id})" style="margin-bottom:8px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+          Enregistrer
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+}
+
+function saveFactureEdits(id){
+  const d=docs.find(x=>x.id==id);if(!d)return;
+  const gef=id2=>document.getElementById(id2)?.value||'';
+  d.client=gef('ef-client').trim()||d.client;
+  d.clientCompany=gef('ef-company');
+  d.tel=gef('ef-tel');
+  d.emailClient=gef('ef-email');
+  d.adresse=gef('ef-adresse');
+  d.payment=gef('ef-payment');
+  d.mentions=gef('ef-mentions');
+  const newStatus=gef('ef-status');
+  if(newStatus!==d.status){
+    d.status=newStatus;
+    if(newStatus==='paid'&&!d.paidAt)d.paidAt=new Date().toISOString();
+    if(!d.history)d.history=[];
+    d.history.push({date:new Date().toISOString(),action:newStatus==='paid'?'Marquée payée':'Remise en attente',status:newStatus});
+  }
+  if(!d.history)d.history=[];
+  d.history.push({date:new Date().toISOString(),action:'Informations modifiées',status:d.status});
+  saveDocs();renderAll();
+  document.getElementById('edit-fac-overlay')?.remove();
+  toast('✅ Facture mise à jour');
+}
+
 // ══════════════════════════════════════════
 // STEPPER
 // ══════════════════════════════════════════
@@ -983,6 +1058,16 @@ function addLine(name='',price=0,qty=1){
 
 function removeLine(id){lines=lines.filter(l=>l.id!=id);renderLines();}
 
+function moveLine(id,dir){
+  const idx=lines.findIndex(l=>l.id==id);
+  if(idx<0)return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=lines.length)return;
+  const [moved]=lines.splice(idx,1);
+  lines.splice(newIdx,0,moved);
+  renderLines();
+}
+
 function changeQty(id,delta){
   const l=lines.find(x=>x.id==id); if(!l)return;
   l.qty=Math.max(1,l.qty+delta); renderLines();
@@ -997,10 +1082,10 @@ function renderLines(){
     updateTotals(); return;
   }
   const TVA_OPTS=[{v:'20',l:'20%'},{v:'10',l:'10%'},{v:'5.5',l:'5,5%'},{v:'2.1',l:'2,1%'},{v:'0',l:'0%'}];
-  container.innerHTML=lines.map(l=>{
+  container.innerHTML=lines.map((l,idx)=>{
     const tvaOpts=TVA_OPTS.map(o=>`<option value="${o.v}" ${String(l.tva??getCurrentTva())==o.v?'selected':''}>${o.l}</option>`).join('');
     return `<div class="line-row" id="lr-${l.id}" draggable="true" data-id="${l.id}">
-      <div class="drag-handle" title="Maintenir pour déplacer">⋮⋮</div>
+      <div class="drag-handle" title="Maintenir pour déplacer" style="touch-action:none;cursor:grab;padding:4px 2px;color:var(--ink3);font-size:13px;user-select:none">⋮⋮</div>
       <div class="line-main">
         <input class="line-desc-input" value="${esc(l.name)}" placeholder="Désignation..." oninput="updateLineName(${l.id},this.value)">
         <div class="line-sub">
@@ -1010,6 +1095,10 @@ function renderLines(){
           <input class="line-price-input" type="number" value="${l.price}" oninput="updateLinePrice(${l.id},this.value)" step="0.01" min="0"> €/u
           <select class="tva-sel" onchange="updateLineTva(${l.id},this.value)">${tvaOpts}</select>
         </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">
+        <button onclick="moveLine(${l.id},-1)" style="width:22px;height:22px;border-radius:5px;border:1.5px solid var(--border2);background:white;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--ink2);${idx===0?'opacity:.25;pointer-events:none':''}">▲</button>
+        <button onclick="moveLine(${l.id},1)" style="width:22px;height:22px;border-radius:5px;border:1.5px solid var(--border2);background:white;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--ink2);${idx===lines.length-1?'opacity:.25;pointer-events:none':''}">▼</button>
       </div>
       <div class="line-total" id="lt-${l.id}">${fmt(l.qty*l.price)}</div>
       <div class="line-del" onclick="removeLine(${l.id})">✕</div>
@@ -1252,6 +1341,7 @@ function openSuivi(id){
       ${d.type==='devis'&&d.status==='sent'?`<button class="btn btn-green" onclick="openSign(${d.id});closeFullscreen('fs-suivi')">✍️ Faire signer</button>`:''}
       ${d.type==='devis'&&d.status==='signed'&&!d.invoiceId?`<button class="btn btn-outline" onclick="convertToInvoice(${d.id});closeFullscreen('fs-suivi')">🧾 Convertir en facture</button>`:''}
       ${d.type==='facture'&&d.status!=='paid'?`<button class="btn btn-green" onclick="markPaid(${d.id});closeFullscreen('fs-suivi')">💰 Marquer payée</button>`:''}
+      ${d.type==='facture'?`<button class="btn btn-outline" onclick="editFacture(${d.id})">✏️ Modifier la facture</button>`:''}
       ${d.type==='devis'&&d.status==='draft'?`<button class="btn btn-outline" onclick="markSent(${d.id});closeFullscreen('fs-suivi')">📤 Marquer envoyé</button>`:''}
     </div>`;
   openFullscreen('fs-suivi');
@@ -1359,7 +1449,7 @@ function buildA4Html(d){
       <div style="font-size:11px;color:#9499AA">Date et signature précédées de la mention « Bon pour accord »</div>
     </div>`:'');
 
-  return `<div style="width:210mm;min-height:297mm;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative">
+  return `<div style="width:210mm;min-height:297mm;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto">
 
     <!-- BANDE LATERALE COULEUR -->
     <div style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${accent}"></div>
@@ -1465,11 +1555,11 @@ function buildA4Html(d){
     </div>`:''}
 
     <!-- FOOTER -->
-    <div style="position:absolute;bottom:16mm;left:14mm;right:14mm;border-top:1px solid #E2E4EA;padding-top:12px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-end">
-        <div style="font-size:10px;color:#9499AA;line-height:1.7">
+    <div style="margin-top:24px;border-top:1px solid #E2E4EA;padding-top:12px;page-break-inside:avoid">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div style="font-size:10px;color:#9499AA;line-height:1.7;max-width:340px">
           ${s.assurance?`<div>Assurance : ${s.assurance}</div>`:''}
-          ${s.conditions?`<div style="max-width:320px">${s.conditions}</div>`:''}
+          ${s.conditions?`<div>${s.conditions}</div>`:''}
           ${d.exoLabel?`<div><em>${d.exoLabel}</em></div>`:''}
         </div>
         <div style="font-size:10px;color:#9499AA;text-align:right">
@@ -1668,6 +1758,7 @@ function docCard(d){
     if(d.status==='sent')actions+=`<button class="action-btn ab-green" onclick="openSign(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Signer</button>`;
     if(d.status==='signed'&&!d.invoiceId)actions+=`<button class="action-btn ab-orange" onclick="convertToInvoice(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>→ Fact.</button>`;
   } else {
+    actions+=`<button class="action-btn ab-blue" onclick="editFacture(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Modifier</button>`;
     if(d.status!=='paid')actions+=`<button class="action-btn ab-gold" onclick="markPaid(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>Payée</button>`;
   }
   actions+=`<button class="action-btn ab-red" onclick="deleteDoc(${d.id})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>Suppr.</button>`;
