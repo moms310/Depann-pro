@@ -1605,7 +1605,7 @@ async function sendByEmail(id){
   if(!d.emailClient){ toast('⚠️ Aucun email client renseigné'); return; }
   const s = settings;
   const isF = d.type==='facture';
-  const subject = `${isF?'Votre facture':'Votre devis'} ${s.company||''}`.trim();
+  const subject = `${isF?'Votre facture':'Votre devis'} ${d.number} — ${s.company||''}`.trim();
   const bodyText =
 `Bonjour ${d.client},
 
@@ -1618,34 +1618,30 @@ En vous remerciant de votre confiance.
 Bien cordialement,
 ${s.company||''}${s.phone?'\n'+s.phone:''}${s.email?'\n'+s.email:''}`;
 
+  // 1) Ouvrir Mail IMMÉDIATEMENT (dans le geste utilisateur) avec tout pré-rempli
+  const mailtoUrl = `mailto:${encodeURIComponent(d.emailClient)}`
+    +`?subject=${encodeURIComponent(subject)}`
+    +`&body=${encodeURIComponent(bodyText)}`;
+  window.location.href = mailtoUrl;
+
+  // 2) Générer et télécharger le PDF en parallèle
   toast('⏳ Génération du PDF…');
   try {
     const { blob, title } = await generatePdfBlob(id);
     const fileName = title+'.pdf';
-
-    // 1) Télécharger le PDF dans Fichiers
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = fileName;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 10000);
 
-    // 2) Ouvrir Mail avec destinataire + objet + corps pré-remplis
-    // (iOS Safari supporte mailto: avec ces paramètres)
-    setTimeout(()=>{
-      window.location.href = `mailto:${encodeURIComponent(d.emailClient)}`
-        +`?subject=${encodeURIComponent(subject)}`
-        +`&body=${encodeURIComponent(bodyText)}`;
-    }, 500);
-
-    // Afficher une modale claire avec les instructions
+    // Modale d'instruction
     setTimeout(()=>{
       const m = document.getElementById('mail-modal');
       if(m){ m.style.display='flex'; }
-    }, 1200);
-
+    }, 1500);
   } catch(e){
-    if(e.name !== 'AbortError') toast('❌ Erreur : '+e.message);
+    if(e.name !== 'AbortError') toast('❌ Erreur PDF : '+e.message);
   }
 }
 // ══════════════════════════════════════════
