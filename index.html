@@ -1383,8 +1383,10 @@ function openSuivi(id){
 // ══════════════════════════════════════════
 // PREVIEW / PRINT
 // ══════════════════════════════════════════
+let currentPreviewDocId = null;
 function previewDoc(id){
   const d=docs.find(x=>x.id==id);if(!d)return;
+  currentPreviewDocId = id;
   document.getElementById('preview-title').textContent=d.type==='facture'?`Facture ${d.number}`:`Devis ${d.number}`;
   const a4=document.getElementById('preview-a4');
   const wrap=document.getElementById('preview-a4-wrap');
@@ -1481,7 +1483,7 @@ async function generatePdfBlob(docId){
 async function doPrint(){
   toast('⏳ Génération du PDF…');
   try {
-    const { blob, title } = await generatePdfBlob(null);
+    const { blob, title } = await generatePdfBlob(currentPreviewDocId);
     await sharePdfBlob(blob, title);
   } catch(e){
     if(e.name !== 'AbortError') toast('❌ Erreur : '+e.message);
@@ -1619,7 +1621,7 @@ function buildA4Html(d){
       <div style="font-size:11px;color:#9499AA">Date et signature précédées de la mention « Bon pour accord »</div>
     </div>`:'');
 
-  return `<div style="width:210mm;min-height:297mm;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative">
+  return `<div style="width:210mm;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative">
 
     <!-- BANDE LATERALE COULEUR -->
     <div style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${accent}"></div>
