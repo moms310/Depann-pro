@@ -1426,67 +1426,74 @@ async function generatePdfBlob(docId){
     ? (d.type==='facture'?'Facture':'Devis')+'_'+d.number
     : document.getElementById('preview-title').textContent.replace(/\s+/g,'_');
 
-  // Dimensions A4 à 96dpi
-  const A4_W = 794;
-  const A4_H = 1123;
-
-  // Iframe caché à largeur A4, hauteur provisoire 1 page
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:'+A4_H+'px;border:none;visibility:hidden;overflow:hidden';
-  document.body.appendChild(iframe);
-
-  await new Promise(resolve => {
-    iframe.onload = resolve;
-    iframe.srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
-      +'<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">'
-      +'<style>*{box-sizing:border-box;margin:0;padding:0}html,body{width:'+A4_W+'px;background:white;font-family:\'DM Sans\',sans-serif}body{overflow:visible!important}</style>'
-      +'</head><body>'+a4Content+'</body></html>';
-  });
-
-  // Attendre polices + layout
-  await new Promise(r => setTimeout(r, 1000));
-
-  // Mesurer le contenu réel, puis calculer le nb de pages A4
-  const contentH = iframe.contentDocument.body.scrollHeight;
-  const nbPages = Math.max(1, Math.ceil(contentH / A4_H));
-  const totalH = nbPages * A4_H; // hauteur totale = N × A4 complets
-
-  // Étirer l'iframe + la bande latérale sur toute la hauteur
-  iframe.style.height = totalH + 'px';
-  const sideBar = iframe.contentDocument.querySelector('[data-sidebar]');
-  if(sideBar) sideBar.style.height = totalH + 'px';
-  await new Promise(r => setTimeout(r, 150));
-
-  // Capturer à scale:2 pour la qualité
+  const A4_W = 794;   // px à 96dpi pour 210mm
+  const A4_H = 1123;  // px à 96dpi pour 297mm
   const SCALE = 2;
-  const canvas = await html2canvas(iframe.contentDocument.body, {
+
+  // CSS commun injecté dans l'iframe
+  const iframeCSS = '*{box-sizing:border-box;margin:0;padding:0}'
+    +'html,body{width:'+A4_W+'px;background:white;font-family:\'DM Sans\',sans-serif;overflow:visible}';
+  const iframeHead = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">'
+    +'<style>'+iframeCSS+'</style></head><body>'+a4Content+'</body></html>';
+
+  // ── Étape 1 : mesurer la hauteur réelle du contenu ──
+  const probe = document.createElement('iframe');
+  probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:'+A4_H+'px;border:none;visibility:hidden;overflow:visible';
+  document.body.appendChild(probe);
+  await new Promise(r => { probe.onload = r; probe.srcdoc = iframeHead; });
+  await new Promise(r => setTimeout(r, 1200)); // polices + layout
+
+  const contentH = Math.max(
+    probe.contentDocument.body.scrollHeight,
+    probe.contentDocument.body.offsetHeight
+  );
+  document.body.removeChild(probe);
+
+  // ── Étape 2 : calculer le nb de pages A4 nécessaires ──
+  // Chaque page fait exactement A4_H px. On arrondit au supérieur strict.
+  const nbPages = Math.max(1, Math.ceil(contentH / A4_H));
+  const totalH  = nbPages * A4_H; // surface totale = N pages A4 complètes
+
+  // ── Étape 3 : rendu final à la bonne hauteur ──
+  const frame = document.createElement('iframe');
+  frame.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:'+totalH+'px;border:none;visibility:hidden;overflow:hidden';
+  document.body.appendChild(frame);
+  await new Promise(r => { frame.onload = r; frame.srcdoc = iframeHead; });
+  await new Promise(r => setTimeout(r, 1200));
+
+  // Étirer la bande bleue latérale sur toute la hauteur
+  const bar = frame.contentDocument.querySelector('[data-sidebar]');
+  if(bar){ bar.style.height = totalH+'px'; bar.style.bottom = 'auto'; }
+  await new Promise(r => setTimeout(r, 80));
+
+  // ── Étape 4 : capturer le canvas complet ──
+  const canvas = await html2canvas(frame.contentDocument.body, {
     scale: SCALE, useCORS: true, allowTaint: true,
     width: A4_W, height: totalH,
     windowWidth: A4_W, windowHeight: totalH,
     backgroundColor: '#ffffff', logging: false
   });
-  document.body.removeChild(iframe);
+  document.body.removeChild(frame);
 
+  // ── Étape 5 : découper en pages A4 et construire le PDF ──
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const pdf  = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
   const pdfW = pdf.internal.pageSize.getWidth();  // 210 mm
   const pdfH = pdf.internal.pageSize.getHeight(); // 297 mm
-
-  // Chaque page = A4_H * SCALE pixels de haut sur le canvas
-  const pageH_canvas = A4_H * SCALE;
+  const sliceH = A4_H * SCALE; // hauteur d'une page en pixels canvas
 
   for(let p = 0; p < nbPages; p++){
     if(p > 0) pdf.addPage();
-    const sl = document.createElement('canvas');
-    sl.width = canvas.width;
-    sl.height = pageH_canvas;
+    // Canvas de la taille exacte d'une page A4
+    const sl  = document.createElement('canvas');
+    sl.width  = canvas.width;
+    sl.height = sliceH;
     const ctx = sl.getContext('2d');
-    // Fond blanc (pour les pages partiellement vides)
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, sl.width, sl.height);
-    // Copier la tranche correspondante
-    ctx.drawImage(canvas, 0, p * pageH_canvas, canvas.width, pageH_canvas, 0, 0, canvas.width, pageH_canvas);
-    // Chaque page PDF = exactement 210×297 mm
+    ctx.drawImage(canvas, 0, p * sliceH, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+    // Chaque page PDF = exactement 210 × 297 mm
     pdf.addImage(sl.toDataURL('image/jpeg', 0.97), 'JPEG', 0, 0, pdfW, pdfH);
   }
 
