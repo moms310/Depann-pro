@@ -1444,16 +1444,15 @@ async function generatePdfBlob(docId){
     +'<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">'
     +'<style>'+iframeCSS+'</style></head><body>'+a4Content+'</body></html>';
 
-  // ── Étape 1 : mesurer la hauteur réelle du contenu A4 ──
-  const probe = document.createElement('iframe');
-  probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:'+A4_H+'px;border:none;visibility:hidden;overflow:visible';
-  document.body.appendChild(probe);
-  await new Promise(r => { probe.onload = r; probe.srcdoc = srcdoc; });
-  await new Promise(r => setTimeout(r, 1400));
-  // Mesurer le div A4 directement, pas le scrollHeight de l'iframe
-  const pageEl = probe.contentDocument.querySelector('[data-a4page]');
-  const rawH = pageEl ? pageEl.getBoundingClientRect().height : probe.contentDocument.body.offsetHeight;
-  document.body.removeChild(probe);
+  // ── Étape 1 : mesurer via un div caché dans le DOM courant (plus fiable qu'un iframe hors écran) ──
+  const measurer = document.createElement('div');
+  measurer.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;visibility:hidden;pointer-events:none;z-index:-1';
+  measurer.innerHTML = a4Content;
+  document.body.appendChild(measurer);
+  await new Promise(r => setTimeout(r, 100)); // laisser le layout se calculer
+  const pageEl = measurer.querySelector('[data-a4page]');
+  const rawH = pageEl ? pageEl.offsetHeight : measurer.offsetHeight;
+  document.body.removeChild(measurer);
 
   // ── Étape 2 : nb de pages A4 (1 page = 1123px à 96dpi) ──
   const nbPages = Math.max(1, Math.ceil(rawH / A4_H));
