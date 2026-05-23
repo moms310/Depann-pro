@@ -325,6 +325,7 @@ textarea.field-input{resize:none;line-height:1.55;min-height:60px}
 .addr-item strong{font-weight:700}
 
 /* ── PRINT / A4 ── */
+#preview-a4-wrap,#preview-a4,[data-a4page]{background:#ffffff!important}
 @media print{
   body,html{max-width:none!important;height:auto!important;overflow:visible!important}
   .no-print{display:none!important}
@@ -1392,7 +1393,7 @@ function previewDoc(id){
   // Construire les pages A4 : chaque page = div 210mm x 297mm
   const html=buildA4Html(d);
   // On wrappe dans un conteneur qui gère l'échelle
-  wrap.innerHTML='<div id="preview-a4" style="transform-origin:top left;width:794px">'+html+'</div>';
+  wrap.innerHTML='<div id="preview-a4" style="transform-origin:top left;width:794px;background:white;">'+html+'</div>';
   openFullscreen('fs-preview');
   requestAnimationFrame(()=>requestAnimationFrame(()=>scalePreview()));
 }
@@ -1647,7 +1648,7 @@ function buildA4Html(d){
       <div style="font-size:11px;color:#9499AA">Date et signature précédées de la mention « Bon pour accord »</div>
     </div>`:'');
 
-  return `<div data-a4page style="width:794px;min-height:1123px;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative;background:white">
+  return `<div data-a4page style="width:794px;min-height:1123px;padding:60px 52px 68px;background:#ffffff;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative">
 
     <!-- BANDE LATERALE COULEUR : hauteur fixée dynamiquement après rendu -->
     <div data-sidebar style="position:absolute;left:0;top:0;width:5px;height:100%;background:${accent}"></div>
