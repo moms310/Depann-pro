@@ -1388,15 +1388,12 @@ function previewDoc(id){
   const d=docs.find(x=>x.id==id);if(!d)return;
   currentPreviewDocId = id;
   document.getElementById('preview-title').textContent=d.type==='facture'?`Facture ${d.number}`:`Devis ${d.number}`;
-  const a4=document.getElementById('preview-a4');
   const wrap=document.getElementById('preview-a4-wrap');
-  // Reset first
-  a4.style.transform='none';
-  a4.style.width='';
-  wrap.style.height='';
-  a4.innerHTML=buildA4Html(d);
+  // Construire les pages A4 : chaque page = div 210mm x 297mm
+  const html=buildA4Html(d);
+  // On wrappe dans un conteneur qui gère l'échelle
+  wrap.innerHTML='<div id="preview-a4" style="transform-origin:top left;width:794px">'+html+'</div>';
   openFullscreen('fs-preview');
-  // Double rAF so the fullscreen is visible and layout is settled
   requestAnimationFrame(()=>requestAnimationFrame(()=>scalePreview()));
 }
 
@@ -1404,16 +1401,16 @@ function scalePreview(){
   const wrap=document.getElementById('preview-a4-wrap');
   const a4=document.getElementById('preview-a4');
   if(!wrap||!a4)return;
-  const A4_W=794; // px at 96dpi for 210mm
-  a4.style.width=A4_W+'px';
-  a4.style.transformOrigin='top left';
+  const A4_W=794;
   const availW=wrap.offsetWidth||window.innerWidth;
   const scale=availW/A4_W;
-  a4.style.transform=`scale(${scale})`;
-  // Give wrap the correct height so it's scrollable
+  a4.style.width=A4_W+'px';
+  a4.style.transformOrigin='top left';
+  a4.style.transform='scale('+scale+')';
+  // Hauteur du wrap = hauteur réelle des pages × scale
   setTimeout(()=>{
-    wrap.style.height=(a4.scrollHeight*scale)+'px';
-  },60);
+    wrap.style.height=(a4.offsetHeight*scale)+'px';
+  },80);
 }
 
 // ══════════════════════════════════════════
@@ -1426,48 +1423,43 @@ async function generatePdfBlob(docId){
     ? (d.type==='facture'?'Facture':'Devis')+'_'+d.number
     : document.getElementById('preview-title').textContent.replace(/\s+/g,'_');
 
-  const A4_W = 794;   // px à 96dpi pour 210mm
-  const A4_H = 1123;  // px à 96dpi pour 297mm
+  // Dimensions exactes A4 à 96dpi
+  const A4_W = 794;
+  const A4_H = 1123;
   const SCALE = 2;
 
-  // CSS commun injecté dans l'iframe
   const iframeCSS = '*{box-sizing:border-box;margin:0;padding:0}'
     +'html,body{width:'+A4_W+'px;background:white;font-family:\'DM Sans\',sans-serif;overflow:visible}';
-  const iframeHead = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+  const srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
     +'<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">'
     +'<style>'+iframeCSS+'</style></head><body>'+a4Content+'</body></html>';
 
-  // ── Étape 1 : mesurer la hauteur réelle du contenu ──
+  // ── Étape 1 : mesurer la hauteur réelle ──
   const probe = document.createElement('iframe');
-  probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:'+A4_H+'px;border:none;visibility:hidden;overflow:visible';
+  probe.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:3000px;border:none;visibility:hidden;overflow:visible';
   document.body.appendChild(probe);
-  await new Promise(r => { probe.onload = r; probe.srcdoc = iframeHead; });
-  await new Promise(r => setTimeout(r, 1200)); // polices + layout
-
-  const contentH = Math.max(
-    probe.contentDocument.body.scrollHeight,
-    probe.contentDocument.body.offsetHeight
-  );
+  await new Promise(r => { probe.onload = r; probe.srcdoc = srcdoc; });
+  await new Promise(r => setTimeout(r, 1200));
+  const rawH = Math.max(probe.contentDocument.body.scrollHeight, probe.contentDocument.body.offsetHeight);
   document.body.removeChild(probe);
 
-  // ── Étape 2 : calculer le nb de pages A4 nécessaires ──
-  // Chaque page fait exactement A4_H px. On arrondit au supérieur strict.
-  const nbPages = Math.max(1, Math.ceil(contentH / A4_H));
-  const totalH  = nbPages * A4_H; // surface totale = N pages A4 complètes
+  // ── Étape 2 : nb de pages A4 (chacune = 297mm = 1123px) ──
+  const nbPages = Math.max(1, Math.ceil(rawH / A4_H));
+  const totalH  = nbPages * A4_H;
 
-  // ── Étape 3 : rendu final à la bonne hauteur ──
+  // ── Étape 3 : rendu final sur N pages A4 ──
   const frame = document.createElement('iframe');
   frame.style.cssText = 'position:fixed;left:-9999px;top:0;width:'+A4_W+'px;height:'+totalH+'px;border:none;visibility:hidden;overflow:hidden';
   document.body.appendChild(frame);
-  await new Promise(r => { frame.onload = r; frame.srcdoc = iframeHead; });
+  await new Promise(r => { frame.onload = r; frame.srcdoc = srcdoc; });
   await new Promise(r => setTimeout(r, 1200));
 
-  // Étirer la bande bleue latérale sur toute la hauteur
+  // Bande bleue sur toute la hauteur
   const bar = frame.contentDocument.querySelector('[data-sidebar]');
-  if(bar){ bar.style.height = totalH+'px'; bar.style.bottom = 'auto'; }
-  await new Promise(r => setTimeout(r, 80));
+  if(bar){ bar.style.height = totalH+'px'; bar.style.bottom='auto'; }
+  await new Promise(r => setTimeout(r, 100));
 
-  // ── Étape 4 : capturer le canvas complet ──
+  // ── Étape 4 : capture canvas à scale 2 ──
   const canvas = await html2canvas(frame.contentDocument.body, {
     scale: SCALE, useCORS: true, allowTaint: true,
     width: A4_W, height: totalH,
@@ -1476,25 +1468,23 @@ async function generatePdfBlob(docId){
   });
   document.body.removeChild(frame);
 
-  // ── Étape 5 : découper en pages A4 et construire le PDF ──
+  // ── Étape 5 : PDF — 1 image par page, chaque page = 210×297mm ──
   const { jsPDF } = window.jspdf;
   const pdf  = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-  const pdfW = pdf.internal.pageSize.getWidth();  // 210 mm
-  const pdfH = pdf.internal.pageSize.getHeight(); // 297 mm
-  const sliceH = A4_H * SCALE; // hauteur d'une page en pixels canvas
+  const pdfW = pdf.internal.pageSize.getWidth();
+  const pdfH = pdf.internal.pageSize.getHeight();
+  const sliceH = A4_H * SCALE;
 
   for(let p = 0; p < nbPages; p++){
     if(p > 0) pdf.addPage();
-    // Canvas de la taille exacte d'une page A4
-    const sl  = document.createElement('canvas');
+    const sl = document.createElement('canvas');
     sl.width  = canvas.width;
     sl.height = sliceH;
     const ctx = sl.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, sl.width, sl.height);
-    ctx.drawImage(canvas, 0, p * sliceH, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-    // Chaque page PDF = exactement 210 × 297 mm
-    pdf.addImage(sl.toDataURL('image/jpeg', 0.97), 'JPEG', 0, 0, pdfW, pdfH);
+    ctx.drawImage(canvas, 0, p*sliceH, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+    pdf.addImage(sl.toDataURL('image/jpeg',0.97), 'JPEG', 0, 0, pdfW, pdfH);
   }
 
   return { blob: pdf.output('blob'), title };
@@ -1641,7 +1631,7 @@ function buildA4Html(d){
       <div style="font-size:11px;color:#9499AA">Date et signature précédées de la mention « Bon pour accord »</div>
     </div>`:'');
 
-  return `<div style="width:210mm;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative">
+  return `<div style="width:210mm;min-height:297mm;height:297mm;overflow:hidden;padding:16mm 14mm 18mm;font-family:'DM Sans',Helvetica,Arial,sans-serif;color:#111827;margin:0 auto;position:relative;page-break-after:always;break-after:page">
 
     <!-- BANDE LATERALE COULEUR -->
     <div data-sidebar style="position:absolute;left:0;top:0;bottom:0;width:5px;background:${accent}"></div>
